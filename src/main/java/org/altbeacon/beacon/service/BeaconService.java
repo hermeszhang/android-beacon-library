@@ -37,8 +37,10 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
+import android.support.annotation.MainThread;
 
 import org.altbeacon.beacon.Beacon;
 import org.altbeacon.beacon.BeaconManager;
@@ -144,9 +146,16 @@ public class BeaconService extends Service {
         private final WeakReference<BeaconService> mService;
 
         IncomingHandler(BeaconService service) {
+            /*
+             * Explicitly state this uses the main thread. Without this we defer to where the
+             * service instance is initialized/created; which is usually the main thread anyways.
+             * But by being explicit we document our code design expectations for where things run.
+             */
+            super(Looper.getMainLooper());
             mService = new WeakReference<BeaconService>(service);
         }
 
+        @MainThread
         @Override
         public void handleMessage(Message msg) {
             BeaconService service = mService.get();
@@ -205,7 +214,7 @@ public class BeaconService extends Service {
      */
     final Messenger mMessenger = new Messenger(new IncomingHandler(this));
 
-
+    @MainThread
     @Override
     public void onCreate() {
         bluetoothCrashResolver = new BluetoothCrashResolver(this);
@@ -293,6 +302,7 @@ public class BeaconService extends Service {
         return false;
     }
 
+    @MainThread
     @Override
     public void onDestroy() {
         LogManager.e(TAG, "onDestroy()");
@@ -329,6 +339,7 @@ public class BeaconService extends Service {
     /**
      * methods for clients
      */
+    @MainThread
     public void startRangingBeaconsInRegion(Region region, Callback callback) {
         synchronized (rangedRegionState) {
             if (rangedRegionState.containsKey(region)) {
@@ -341,6 +352,7 @@ public class BeaconService extends Service {
         mCycledScanner.start();
     }
 
+    @MainThread
     public void stopRangingBeaconsInRegion(Region region) {
         int rangedRegionCount;
         synchronized (rangedRegionState) {
@@ -354,6 +366,7 @@ public class BeaconService extends Service {
         }
     }
 
+    @MainThread
     public void startMonitoringBeaconsInRegion(Region region, Callback callback) {
         LogManager.d(TAG, "startMonitoring called");
         monitoringStatus.addRegion(region, callback);
@@ -361,6 +374,7 @@ public class BeaconService extends Service {
         mCycledScanner.start();
     }
 
+    @MainThread
     public void stopMonitoringBeaconsInRegion(Region region) {
         LogManager.d(TAG, "stopMonitoring called");
         monitoringStatus.removeRegion(region);
@@ -370,6 +384,7 @@ public class BeaconService extends Service {
         }
     }
 
+    @MainThread
     public void setScanPeriods(long scanPeriod, long betweenScanPeriod, boolean backgroundFlag) {
         mCycledScanner.setScanPeriods(scanPeriod, betweenScanPeriod, backgroundFlag);
     }
